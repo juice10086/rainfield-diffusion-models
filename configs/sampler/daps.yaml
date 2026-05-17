@@ -1,0 +1,58 @@
+name: ${hydra:runtime.choices.sampler}
+
+parameters_real_cmls:
+    n_steps: 100
+    sigma_min: 0.002
+    sigma_max: 80.0
+    rho: 7.0
+    # ---
+    n_diffusion_steps: 5
+    eta_x0_est: 0.0
+    tau: 1.0
+    # ---
+    mcmc_sampler: "Langevin"
+    n_mcmc_steps: 50
+    lr: 2e-5
+    min_ratio: 0.01
+    mcmc_sampler_extra_params: {}
+    # ---
+    display_im: False
+
+
+parameters:
+    n_steps: 100
+    sigma_min: 0.002
+    sigma_max: 80.0
+    rho: 7.0
+    # ---
+    n_diffusion_steps: 5
+    eta_x0_est: 0.0
+    tau: 1.0
+    # ---
+    mcmc_sampler: "Langevin"
+    n_mcmc_steps: 100
+    lr: 2e-5
+    min_ratio: 0.01
+    mcmc_sampler_extra_params: {}
+    # ---
+    display_im: False
+
+
+
+parameters_gp_1d:
+    n_steps: 100
+    sigma_min: 0.002
+    sigma_max: 100.0
+    rho: 7.0
+    # ---
+    n_diffusion_steps: 5
+    eta_x0_est: 0.0
+    tau: 1.0
+    # ---
+    mcmc_sampler: "Langevin"
+    n_mcmc_steps: 100
+    lr: 5e-4
+    min_ratio: 0.01
+    mcmc_sampler_extra_params: {}
+    # ---
+    display_im: False

@@ -1,0 +1,45 @@
+name: ${hydra:runtime.choices.sampler}
+
+
+parameters_real_cmls:
+    # --- sampling
+    n_steps: 32
+    sigma_min: 2e-3
+    sigma_max: 80.0
+    rho: 7.0
+    # --- gibbs
+    lr: 3e-2
+    n_gradient_steps: 10
+    t_mid_type: half
+    # --- debugging
+    display_im: False
+    display_freq: 10
+
+
+parameters:
+    # --- sampling
+    n_steps: 32
+    sigma_min: 2e-3
+    sigma_max: 80.0
+    rho: 5.0
+    # --- gibbs
+    lr: 3e-2
+    n_gradient_steps: 10
+    t_mid_type: half
+    # --- debugging
+    display_im: False
+    display_freq: 10
+
+
+parameters_gp_1d:
+    # --- sampling
+    n_steps: 64
+    sigma_min: 2e-3
+    sigma_max: 100.0
+    rho: 7.0
+    # ---
+    lr: 3e-2
+    n_gradient_steps: 10
+    t_mid_type: half
+    # ---
+    display_im: False

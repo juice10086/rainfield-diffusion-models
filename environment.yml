@@ -1,0 +1,29 @@
+name: rain
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python>=3.8, <3.10
+  - pip
+  - numpy>=1.20
+  - click>=8.0
+  - pillow>=8.3.1
+  - scipy>=1.7.1
+  - pytorch=1.12.1
+  - torchvision=0.13.1
+  - pandas>=1.3
+  - psutil
+  - requests
+  - tqdm
+  - imageio
+  - basemap>=1.2.1
+  - pip:
+    - imageio-ffmpeg>=0.4.3
+    - pyspng
+    - hydra-core
+    - omegaconf
+    - pynncml
+    - pykrige
+    - matplotlib
+    - scikit-learn

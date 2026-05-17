@@ -1,0 +1,53 @@
+name: ${hydra:runtime.choices.sampler}
+
+
+parameters_real_cmls:
+    # --- sampling
+    n_steps: 1000
+    sigma_min: 2e-3
+    sigma_max: 80.0
+    rho: 5.0
+    # ---
+    lr: 5e-3
+    obs_weight: 1.0
+    grad_term_weight: 1.0
+    # can be {'linear','sqrt','square','log','trunc_linear','power2over3','const'}
+    denoise_weight_mode: "linear" 
+    sigma_x0: 1e-3  # jitter on x0_pred
+    # --- debugging
+    display_im: False
+    display_freq: 50
+
+
+parameters:
+    # --- sampling
+    n_steps: 1000
+    sigma_min: 2e-3
+    sigma_max: 80.0
+    rho: 5.0
+    # ---
+    lr: 5e-3
+    obs_weight: 1.0
+    grad_term_weight: 1.0
+    # can be {'linear','sqrt','square','log','trunc_linear','power2over3','const'}
+    denoise_weight_mode: "linear" 
+    sigma_x0: 1e-3  # jitter on x0_pred
+    # --- debugging
+    display_im: False
+    display_freq: 50
+
+
+parameters_gp_1d:
+    # --- sampling
+    n_steps: 1000
+    sigma_min: 2e-3
+    sigma_max: 100.0
+    rho: 5.0
+    # ---
+    lr: 1e-1
+    obs_weight: 1.0
+    grad_term_weight: 1.0
+    denoise_weight_mode: "linear" 
+    sigma_x0: 1e-3  # jitter on x0_pred
+    # --- debugging
+    display_im: False

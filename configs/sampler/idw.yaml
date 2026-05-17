@@ -1,0 +1,13 @@
+name: ${hydra:runtime.choices.sampler}
+
+
+parameters_real_cmls:
+  p: 2
+  roi: 6.0
+  eps: 1e-6
+
+
+parameters:
+  p: 2
+  roi: 6.0
+  eps: 1e-6

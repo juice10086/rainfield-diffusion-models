@@ -1,0 +1,19 @@
+# python3 cache and build
+*.pyc
+*.egg-info
+__pycache__
+__cache__
+build/
+
+# data in case it is downloaded/preprocessed in the repo folder
+data/*.pt
+data/*.csv
+data/*.npy
+data/*.zip
+data/*.mp4
+data/*.nc
+
+
+# hydra outputs
+outputs
+output_gp_1d_*

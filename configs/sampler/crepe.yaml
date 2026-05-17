@@ -1,0 +1,16 @@
+name: ${hydra:runtime.choices.sampler}
+
+
+parameters_gp_1d:
+  n_steps: 32
+  n_PT_steps: 400
+  n_steps_proposal: 1
+  proposal_kernel: prior
+  params_scheduler: {
+    sigma_max: 100,
+    sigma_min: 0.002,
+    rho: 7,
+  }
+  return_only_reconstructions: True
+  # ---
+  display_im: False

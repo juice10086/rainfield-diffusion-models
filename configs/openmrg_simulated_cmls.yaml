@@ -1,0 +1,48 @@
+defaults:
+  - sampler: mgdm
+
+device: cuda:0
+seed: 321
+save_dir: null
+
+model:
+  network_pkl: data/checkpoints/quantile-111997-relu.pkl
+  threshold: 1e-2
+  use_threshold: False
+
+dataset:
+  path: data/test_rain_rate_f4.npy
+
+# if set to true, will solve inverse problem on all fields
+run_on_all_fields: False
+field_idx:
+  - 587
+  - 3160
+  - 3365
+  - 3383
+  - 4080
+
+
+# inv problem
+obs_std: 0.01
+links:
+  n_links: 15
+  height: 48
+  width: 36
+  min_length: 5
+  max_length: 20
+  path_pre_generated_links: null
+
+non_negative_obs: True
+# NOTE to provide power-law constant of CML if needed (by default, assume a=1 and b=1 when path is null)
+path_cst_a_power_b: null
+
+n_samples: 10
+
+reporting:
+  print_metrics: True
+  print_runtime: False
+  plot_reconstruction: False
+  n_plotted_samples: 5
+  plot_shift: 0
+  plot_suffix: -img.pdf

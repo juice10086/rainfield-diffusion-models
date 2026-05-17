@@ -1,0 +1,11 @@
+name: ${hydra:runtime.choices.sampler}
+
+
+parameters_real_cmls:
+  variogram_model: "exponential"
+  pseudo_inv: True
+
+
+parameters:
+  variogram_model: "exponential"
+  pseudo_inv: False

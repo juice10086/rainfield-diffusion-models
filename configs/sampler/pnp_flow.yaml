@@ -1,0 +1,15 @@
+name: ${hydra:runtime.choices.sampler}
+
+parameters:
+    # --- sampling
+    n_steps: 100
+    sigma_min: 2e-3
+    sigma_max: 80.0
+    rho: 7.0
+    # ---
+    lr: 0.01
+    lr_style: "constant"
+    alpha: 1.0
+    n_samples: 5
+    # --- debugging
+    display_im: True
