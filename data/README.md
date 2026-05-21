@@ -1,6 +1,6 @@
 # Data preparation
 
-This folder contains the scripts used to prepare OpenMRG rain-rate arrays and CML experiment settings.
+This folder contains the scripts used to prepare OpenMRG rain-rate arrays and CML experiment settings ([Link to data and checkpoints](https://drive.google.com/file/d/15NGJAnmVsSbYWfnOcqfITMGDegBW0nBH/view?usp=share_link)).
 
 The prepared data release has the following structure:
 

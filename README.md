@@ -1,12 +1,12 @@
 # Bayesian Rain Field Reconstruction using Commercial Microwave Links and Diffusion Model Priors
 
 [![Paper](https://img.shields.io/badge/paper-arXiv-b31b1b.svg)](https://arxiv.org/pdf/2605.05520)
-[![Resources](https://img.shields.io/badge/resources-data--and--checkpoints-lightgreen.svg)]([to-be-provided-later](https://drive.google.com/file/d/15NGJAnmVsSbYWfnOcqfITMGDegBW0nBH/view?usp=share_link))
+[![Resources](https://img.shields.io/badge/resources-data--and--checkpoints-lightgreen.svg)](https://drive.google.com/file/d/15NGJAnmVsSbYWfnOcqfITMGDegBW0nBH/view?usp=share_link)
 
 
 <img src="front-img.png" />
 
-Code source for the paper *"Bayesian Rain Field Reconstruction using Commercial Microwave Links and Diffusion Model Priors"*.
+Code source for the paper *"Bayesian Rain Field Reconstruction using Commercial Microwave Links and Diffusion Model Priors"*, ICML 2026
 [Link to arXiv paper](https://arxiv.org/pdf/2605.05520) |
 [Link to data and checkpoints](https://drive.google.com/file/d/15NGJAnmVsSbYWfnOcqfITMGDegBW0nBH/view?usp=share_link)
 
@@ -184,8 +184,6 @@ python experiments/openmrg_simulated_cml_runner.py \
 Run real-CML geometry experiments:
 
 ```bash
-export REPO_PATH_JZ=$(pwd)
-
 python experiments/openmrg_real_cml_runner.py \
   save_dir=experiments/out_openmrg_real \
   dataset.path=/path/to/test_rain_rate_f4.npy \
