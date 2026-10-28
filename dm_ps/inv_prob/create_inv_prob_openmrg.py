@@ -1,6 +1,4 @@
 from pathlib import Path
-from typing import Callable
-from dataclasses import dataclass
 from typing import Union
 
 import torch
@@ -8,20 +6,10 @@ from torch import Tensor
 
 from training.rain_dataset import RainDataset
 from dm_ps.inv_prob._siddon_algo import siddon_algo_2d
+from dm_ps.inv_prob.base import InverseProblem
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-
-
-@dataclass
-class InverseProblem:
-    obs: Tensor
-    obs_img: Tensor
-    obs_std: float
-    H_func: object
-    log_pot: Callable[[Tensor], Tensor]
-    log_pot_batch: Callable[[Tensor], Tensor]
-    x_ref: Tensor
 
 
 def create_inv_prob(

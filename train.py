@@ -43,6 +43,15 @@ def parse_int_list(s):
 # Main options.
 @click.option('--outdir',        help='Where to save the results', metavar='DIR',                   type=str, required=True, default="out_train")
 @click.option('--data',          help='Path to the dataset', metavar='ZIP|DIR',                     type=str, required=True, default="data/train_rain_rate_f4.npy")
+@click.option('--dataset', type=click.Choice(['auto', 'rain', 'radio']), default='auto', show_default=True, help='auto: directory=PPData5D, file=rain NPY')
+@click.option('--radio-manifest', type=click.Path(exists=True, dir_okay=False), default=None)
+@click.option('--source-frequency', default='f00', show_default=True)
+@click.option('--target-frequency', default='f03', show_default=True)
+@click.option('--use-source', type=bool, default=True, show_default=True, help='False: baseline C; True: cross-frequency C,Ys,Ms')
+@click.option('--source-fraction', type=click.FloatRange(0, 1), default=1.0, show_default=True)
+@click.option('--split-seed', type=int, default=42, show_default=True)
+@click.option('--terrain-scale', type=click.FloatRange(min=0, min_open=True), default=1000.0, show_default=True)
+@click.option('--exclude-buildings', type=bool, default=True, show_default=True)
 @click.option('--cond',          help='Train class-conditional model', metavar='BOOL',              type=bool, default=False, show_default=True)
 @click.option('--arch',          help='Network architecture', metavar='ddpmpp|ncsnpp|adm',          type=click.Choice(['ddpmpp', 'ncsnpp', 'adm']), default='ddpmpp', show_default=True)
 @click.option('--precond',       help='Preconditioning & loss function', metavar='vp|ve|edm',       type=click.Choice(['vp', 've', 'edm']), default='edm', show_default=True)
@@ -99,12 +108,23 @@ def main(**kwargs):
         --data=datasets/cifar10-32x32.zip --cond=1 --arch=ddpmpp
     """
     opts = dnnlib.EasyDict(kwargs)
-    torch.multiprocessing.set_start_method('spawn')
-    dist.init()
+    torch.multiprocessing.set_start_method('spawn', force=True)
+    if not opts.dry_run:
+        dist.init()
+    is_radio = opts.dataset == 'radio' or (opts.dataset == 'auto' and os.path.isdir(opts.data))
+    if is_radio and (opts.precond != 'edm' or opts.cond):
+        raise click.ClickException('Radio spatial conditioning requires --precond=edm and --cond=False')
 
     # Initialize config dict.
     c = dnnlib.EasyDict()
     c.dataset_kwargs = dnnlib.EasyDict(class_name="training.rain_dataset.RainDataset", path=opts.data, use_labels=opts.cond, xflip=opts.xflip, cache=opts.cache)
+    if is_radio:
+        c.dataset_kwargs = dnnlib.EasyDict(
+            class_name='training.radio_dataset.RadioDataset', path=opts.data,
+            manifest=opts.radio_manifest, source_frequency=opts.source_frequency,
+            target_frequency=opts.target_frequency, split='train', seed=opts.split_seed,
+            use_source=opts.use_source, source_fraction=opts.source_fraction,
+            terrain_scale=opts.terrain_scale, exclude_buildings=opts.exclude_buildings)
     c.data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, num_workers=opts.workers, prefetch_factor=2)
     c.network_kwargs = dnnlib.EasyDict()
     c.loss_kwargs = dnnlib.EasyDict()
@@ -114,12 +134,16 @@ def main(**kwargs):
     try:
         dataset_obj = dnnlib.util.construct_class_by_name(**c.dataset_kwargs)
         dataset_name = dataset_obj.name
-        c.dataset_kwargs.resolution = dataset_obj.resolution # be explicit about dataset resolution
-        c.dataset_kwargs.max_size = len(dataset_obj) # be explicit about dataset size
+        if not is_radio:
+            c.dataset_kwargs.resolution = dataset_obj.resolution # be explicit about dataset resolution
+            c.dataset_kwargs.max_size = len(dataset_obj) # be explicit about dataset size
+        else:
+            # Validate actual PNG/NPZ contents before launching training.
+            dataset_obj[0]
         if opts.cond and not dataset_obj.has_labels:
             raise click.ClickException('--cond=True requires labels specified in dataset.json')
         del dataset_obj # conserve memory
-    except IOError as err:
+    except (IOError, ValueError, KeyError) as err:
         raise click.ClickException(f'--data: {err}')
 
     # Network architecture.
@@ -150,7 +174,7 @@ def main(**kwargs):
         c.network_kwargs.model_channels = opts.cbase
     if opts.cres is not None:
         c.network_kwargs.channel_mult = opts.cres
-    if opts.augment:
+    if opts.augment and not is_radio:
         c.augment_kwargs = dnnlib.EasyDict(class_name='training.augment.AugmentPipe', p=opts.augment)
         c.augment_kwargs.update(xflip=1e8, yflip=1, scale=1, rotate_frac=1, aniso=1, translate_frac=1)
         c.network_kwargs.augment_dim = 9
@@ -167,6 +191,8 @@ def main(**kwargs):
     # Random seed.
     if opts.seed is not None:
         c.seed = opts.seed
+    elif opts.dry_run:
+        c.seed = 0
     else:
         seed = torch.randint(1 << 31, size=[], device=torch.device('cuda'))
         torch.distributed.broadcast(seed, src=0)
@@ -187,7 +213,7 @@ def main(**kwargs):
         c.resume_state_dump = opts.resume
 
     # Description string.
-    cond_str = 'cond' if c.dataset_kwargs.use_labels else 'uncond'
+    cond_str = ('source' if opts.use_source else 'baseline') if is_radio else ('cond' if opts.cond else 'uncond')
     dtype_str = 'fp16' if c.network_kwargs.use_fp16 else 'fp32'
     desc = f'{dataset_name:s}-{cond_str:s}-{opts.arch:s}-{opts.precond:s}-gpus{dist.get_world_size():d}-batch{c.batch_size:d}-{dtype_str:s}'
     if opts.desc is not None:
@@ -209,18 +235,19 @@ def main(**kwargs):
         assert not os.path.exists(c.run_dir)
 
     # XXX params ---
-    c.dataset_kwargs.p_x_flip = kwargs["flip"]
+    c.dataset_kwargs.p_x_flip = 0.5 if is_radio and opts.xflip else kwargs["flip"]
     c.dataset_kwargs.p_y_flip = kwargs["flip"]
     c.network_kwargs.sigma_data = kwargs["sigma_data"]
     c.network_kwargs.model_channels = kwargs["model_channels"]
     c.network_kwargs.dropout = kwargs["dropout"]
-    c.network_kwargs.use_relu_final_ouput = kwargs["use_relu_final_ouput"]
+    c.network_kwargs.use_relu_final_ouput = False if is_radio else kwargs["use_relu_final_ouput"]
     c.network_kwargs.augment_dim = 0
     c.loss_kwargs.sigma_data = kwargs["sigma_data"]
     c.snapshot_ticks = (kwargs["snapshot_ticks"] * 20_000) // opts.batch
     c.state_dump_ticks = (kwargs["snapshot_ticks"] * 20_000) // opts.batch
     c.optimizer_kwargs.lr = kwargs["lr"]
-    c.dataset_kwargs.divide_by_quantile = kwargs["divide_by_quantile"]
+    if not is_radio:
+        c.dataset_kwargs.divide_by_quantile = kwargs["divide_by_quantile"]
     # ---
 
     # Print options.
@@ -230,7 +257,9 @@ def main(**kwargs):
     dist.print0()
     dist.print0(f'Output directory:        {c.run_dir}')
     dist.print0(f'Dataset path:            {c.dataset_kwargs.path}')
-    dist.print0(f'Class-conditional:       {c.dataset_kwargs.use_labels}')
+    dist.print0(f'Class-conditional:       {opts.cond}')
+    if is_radio:
+        dist.print0(f'Radio conditioning:     {cond_str}, z01 (30 m), {opts.source_frequency} -> {opts.target_frequency}')
     dist.print0(f'Network architecture:    {opts.arch}')
     dist.print0(f'Preconditioning & loss:  {opts.precond}')
     dist.print0(f'Number of GPUs:          {dist.get_world_size()}')

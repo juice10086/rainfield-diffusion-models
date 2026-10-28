@@ -1,19 +1,45 @@
-# python3 cache and build
-*.pyc
-*.egg-info
-__pycache__
-__cache__
+# Python caches, build artifacts, and local virtual environments
+__pycache__/
+__cache__/
+*.py[cod]
+*.egg-info/
 build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
 
-# data in case it is downloaded/preprocessed in the repo folder
-data/*.pt
-data/*.csv
-data/*.npy
-data/*.zip
-data/*.mp4
-data/*.nc
+# Local datasets and generated data (keep data/*.py, Markdown, and doc images)
+PPData5D*/
+/data/**/*.csv
+/data/**/*.npy
+/data/**/*.npz
+/data/**/*.zip
+/data/**/*.mp4
+/data/**/*.nc
+/data/ppdata5d*.json
+/data/checkpoints/
+/data/exp_settings/
 
+# Model weights, resumable training states, and serialized reconstructions
+*.pkl
+*.pt
+*.pth
+*.ckpt
+*.safetensors
 
-# hydra outputs
-outputs
+# Training runs (including logs, metrics, options, and snapshots)
+/out_train/
+/out_radio_*/
+/training-runs/
+
+# Posterior-sampling experiments and Hydra outputs
+/experiments/out_*/
+outputs/
 output_gp_1d_*
+
+# Local credentials
+/.aws/

@@ -21,7 +21,9 @@ class EDMWrapper(torch.nn.Module):
         with dnnlib.util.open_url(
             str(network_pkl), verbose=(dist.get_rank() == 0)
         ) as f:
-            net = pickle.load(f)["ema"].to(device)
+            snapshot = pickle.load(f)
+            net = snapshot['ema'].to(device)
+            self.dataset_kwargs = snapshot.get('dataset_kwargs', {})
 
         # set network to inference model
         self.net = _prepare_model_to_eval(net, device)
@@ -88,6 +90,33 @@ class EDMWrapper(torch.nn.Module):
     def pred_noise(self, x, sigma, ctx=None):
         x_0 = self.denoiser_fn(x, sigma, ctx)
         return (x - x_0) / sigma
+
+
+class EDMRadio(EDMWrapper):
+    """Bind one scene's conditions; keep maps in differentiable PNG/255 units."""
+
+    def __init__(self, network_pkl, condition, device='cpu'):
+        super().__init__(network_pkl, device=device)
+        condition = torch.as_tensor(condition, dtype=torch.float32, device=device).detach().clone()
+        if condition.ndim == 3:
+            condition = condition.unsqueeze(0)
+        expected = (1, getattr(self.net, 'condition_channels', 0), *self.x_shape[-2:])
+        if expected[1] not in (3, 5) or tuple(condition.shape) != expected:
+            raise ValueError(f'Radio checkpoint requires spatial condition {expected}, got {tuple(condition.shape)}')
+        if self.x_shape[0] != 1 or not torch.isfinite(condition).all():
+            raise ValueError('Radio prior must output one channel and receive finite conditions')
+        self.register_buffer('condition', condition)
+
+    def denoiser_fn(self, x, sigma, ctx=None, use_cfg=False):
+        if ctx is not None or use_cfg:
+            raise ValueError('Radio conditions are bound to the scene; class labels/CFG are unsupported')
+        sigmas = torch.as_tensor(sigma, device=x.device, dtype=x.dtype)
+        if sigmas.numel() == 1:
+            sigmas = sigmas.reshape(1).expand(x.shape[0])
+        elif sigmas.shape[0] != x.shape[0]:
+            raise ValueError('sigma must be scalar or have the same batch size as x')
+        condition = self.condition.to(x).expand(x.shape[0], -1, -1, -1)
+        return self.net(x, sigmas, condition=condition)
 
 
 class EDMOpenMRG(EDMWrapper):

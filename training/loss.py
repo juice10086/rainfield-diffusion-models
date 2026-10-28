@@ -69,14 +69,24 @@ class EDMLoss:
         self.P_std = P_std
         self.sigma_data = sigma_data
 
-    def __call__(self, net, images, labels=None, augment_pipe=None):
+    def __call__(self, net, images, labels=None, augment_pipe=None, condition=None, valid_mask=None):
+        if augment_pipe is not None and (condition is not None or valid_mask is not None):
+            raise ValueError('Apply aligned radio augmentation in the dataset')
         rnd_normal = torch.randn([images.shape[0], 1, 1, 1], device=images.device)
         sigma = (rnd_normal * self.P_std + self.P_mean).exp()
         weight = (sigma ** 2 + self.sigma_data ** 2) / (sigma * self.sigma_data) ** 2
         y, augment_labels = augment_pipe(images) if augment_pipe is not None else (images, None)
         n = torch.randn_like(y) * sigma
-        D_yn = net(y + n, sigma, labels, augment_labels=augment_labels)
+        kwargs = {} if condition is None else dict(condition=condition)
+        D_yn = net(y + n, sigma, labels, augment_labels=augment_labels, **kwargs)
         loss = weight * ((D_yn - y) ** 2)
+        if valid_mask is not None:
+            # Mean over valid pixels per example, independent of building coverage.
+            mask = valid_mask.to(loss.dtype).expand_as(loss)
+            counts = mask.flatten(1).sum(1)
+            if torch.any(counts == 0):
+                raise ValueError('Each training sample needs at least one valid pixel')
+            return (loss * mask).flatten(1).sum(1) / counts
         return loss
 
 #----------------------------------------------------------------------------

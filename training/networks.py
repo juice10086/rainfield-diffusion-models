@@ -641,6 +641,7 @@ class EDMPrecond(torch.nn.Module):
         model_type      = 'DhariwalUNet',   # Class name of the underlying model.
         # XXX added
         use_relu_final_ouput = False,
+        condition_channels = 0,            # Spatial conditions; never diffused.
         # ---
         **model_kwargs,                     # Keyword arguments for the underlying model.
     ):
@@ -652,13 +653,14 @@ class EDMPrecond(torch.nn.Module):
         self.sigma_min = sigma_min
         self.sigma_max = sigma_max
         self.sigma_data = sigma_data
-        self.model = globals()[model_type](img_resolution=img_resolution, in_channels=img_channels, out_channels=img_channels, label_dim=label_dim, **model_kwargs)
+        self.condition_channels = condition_channels
+        self.model = globals()[model_type](img_resolution=img_resolution, in_channels=img_channels + condition_channels, out_channels=img_channels, label_dim=label_dim, **model_kwargs)
         
         # XXX
         self.use_relu_final_ouput = use_relu_final_ouput
         # ---
 
-    def forward(self, x, sigma, class_labels=None, force_fp32=False, **model_kwargs):
+    def forward(self, x, sigma, class_labels=None, force_fp32=False, condition=None, **model_kwargs):
         x = x.to(torch.float32)
         sigma = sigma.to(torch.float32).reshape(-1, 1, 1, 1)
         class_labels = None if self.label_dim == 0 else torch.zeros([1, self.label_dim], device=x.device) if class_labels is None else class_labels.to(torch.float32).reshape(-1, self.label_dim)
@@ -669,7 +671,15 @@ class EDMPrecond(torch.nn.Module):
         c_in = 1 / (self.sigma_data ** 2 + sigma ** 2).sqrt()
         c_noise = sigma.log() / 4
 
-        F_x = self.model((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
+        model_input = c_in * x
+        if self.condition_channels:
+            expected = (x.shape[0], self.condition_channels, *x.shape[-2:])
+            if condition is None or tuple(condition.shape) != expected:
+                raise ValueError(f'Expected spatial condition with shape {expected}')
+            model_input = torch.cat([model_input, condition.to(device=x.device, dtype=torch.float32)], dim=1)
+        elif condition is not None:
+            raise ValueError('This model was constructed without spatial conditions')
+        F_x = self.model(model_input.to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
         assert F_x.dtype == dtype
         D_x = c_skip * x + c_out * F_x.to(torch.float32)
 

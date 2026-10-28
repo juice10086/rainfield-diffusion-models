@@ -2,6 +2,7 @@ name: ${hydra:runtime.choices.sampler}
 
 
 parameters_real_cmls:
+    guidance: residual
     # --- sampling
     n_steps: 420
     sigma_min: 2e-3
@@ -17,6 +18,7 @@ parameters_real_cmls:
 
 
 parameters:
+    guidance: residual
     # --- sampling
     n_steps: 320
     sigma_min: 2e-3
@@ -31,6 +33,7 @@ parameters:
 
 
 parameters_gp_1d:
+    guidance: residual
     # --- sampling
     n_steps: 320
     sigma_min: 2e-3

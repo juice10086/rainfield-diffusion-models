@@ -1,13 +1,26 @@
-from dm_ps.samplers.dps_ve import dps
-from dm_ps.samplers.mgdm_ve import mgdm
-from dm_ps.samplers.replica_exhange.algo import replica_algo
-from dm_ps.samplers.daps import daps
-from dm_ps.samplers.pnp_flow import pnp_flow
-from dm_ps.samplers.reddiff import reddiff
-from dm_ps.samplers.tds import tds
-from dm_ps.samplers.mgps_ve import mgps
+"""Load only the selected sampler and its optional dependencies."""
 
-from dm_ps.samplers.rain_baselines import idw_map, gmz_map, ok_map
+from importlib import import_module
+
+
+def _lazy_sampler(module, function):
+    def sample(*args, **kwargs):
+        return getattr(import_module(module), function)(*args, **kwargs)
+    sample.__name__ = function
+    return sample
+
+
+dps = _lazy_sampler('dm_ps.samplers.dps_ve', 'dps')
+mgdm = _lazy_sampler('dm_ps.samplers.mgdm_ve', 'mgdm')
+replica_algo = _lazy_sampler('dm_ps.samplers.replica_exhange.algo', 'replica_algo')
+daps = _lazy_sampler('dm_ps.samplers.daps', 'daps')
+pnp_flow = _lazy_sampler('dm_ps.samplers.pnp_flow', 'pnp_flow')
+reddiff = _lazy_sampler('dm_ps.samplers.reddiff', 'reddiff')
+tds = _lazy_sampler('dm_ps.samplers.tds', 'tds')
+mgps = _lazy_sampler('dm_ps.samplers.mgps_ve', 'mgps')
+idw_map = _lazy_sampler('dm_ps.samplers.rain_baselines', 'idw_map')
+gmz_map = _lazy_sampler('dm_ps.samplers.rain_baselines', 'gmz_map')
+ok_map = _lazy_sampler('dm_ps.samplers.rain_baselines', 'ok_map')
 
 
 AVAILABLE_SAMPLERS = {

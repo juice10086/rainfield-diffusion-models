@@ -72,6 +72,8 @@ def training_loop(
     # Construct network.
     dist.print0('Constructing network...')
     interface_kwargs = dict(img_resolution=dataset_obj.resolution, img_channels=dataset_obj.num_channels, label_dim=dataset_obj.label_dim)
+    if hasattr(dataset_obj, 'condition_channels'):
+        interface_kwargs['condition_channels'] = dataset_obj.condition_channels
     net = dnnlib.util.construct_class_by_name(**network_kwargs, **interface_kwargs) # subclass of torch.nn.Module
     net.train().requires_grad_(True).to(device)
     if dist.get_rank() == 0:
@@ -79,7 +81,11 @@ def training_loop(
             images = torch.zeros([batch_gpu, net.img_channels, net.img_resolution, net.img_resolution], device=device)
             sigma = torch.ones([batch_gpu], device=device)
             labels = torch.zeros([batch_gpu, net.label_dim], device=device)
-            misc.print_module_summary(net, [images, sigma, labels], max_nesting=2)
+            if getattr(net, 'condition_channels', 0):
+                condition = torch.zeros([batch_gpu, net.condition_channels, *images.shape[-2:]], device=device)
+                misc.print_module_summary(net, [images, sigma, labels, False, condition], max_nesting=2)
+            else:
+                misc.print_module_summary(net, [images, sigma, labels], max_nesting=2)
 
     # Setup optimizer.
     dist.print0('Setting up optimizer...')
@@ -127,9 +133,15 @@ def training_loop(
         optimizer.zero_grad(set_to_none=True)
         for round_idx in range(num_accumulation_rounds):
             with misc.ddp_sync(ddp, (round_idx == num_accumulation_rounds - 1)):
-                images, *_ = next(dataset_iterator)
-                images = images.to(device).to(torch.float32)
-                loss = loss_fn(net=ddp, images=images, labels=None, augment_pipe=None)
+                batch = next(dataset_iterator)
+                if isinstance(batch, dict):
+                    images = batch['target'].to(device, dtype=torch.float32)
+                    loss = loss_fn(net=ddp, images=images, labels=None,
+                                   condition=batch['condition'].to(device, dtype=torch.float32),
+                                   valid_mask=batch['valid_mask'].to(device))
+                else:
+                    images = batch[0].to(device, dtype=torch.float32)
+                    loss = loss_fn(net=ddp, images=images, labels=None, augment_pipe=None)
 
                 training_stats.report('Loss/loss', loss)
                 # loss.sum().mul(loss_scaling / batch_gpu_total).backward()
